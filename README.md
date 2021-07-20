@@ -53,7 +53,7 @@ An Object is composed by three different parts:
 * **Static sized values**: All values that are of a static size, are combined into a fixed sized byte array block. Each value has a well defined position inside this block. The number of values is limited Only by the maximum size of a frame (which is bigger than the usual memory of a PC 2021)
 * **Dynamic sized values**: All values that are of a dynamic size are added as a stream of values after the static block. Depending on the Type they are embedded into the object or a reference to another object.
 
-The number of dynamic values is limited to 253 0xfd. (0 being a NOP value, 01 reserved for the static block and 0xff a reserved value for future extensions)
+The number of dynamic values (members) of a single object is limited to 252. (0x00 being a NOP value, 0xfd reserved for the static block, 0xfe the end marker and 0xff a reserved value for future extensions)
 
 Objects can also be collected:
 
