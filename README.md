@@ -2,12 +2,12 @@
 
 ## Introductional Overview
 
-Sunshine is a code generator and a serialization API like capnp proto, flatbuffers, avro etc.
+Sunshine is a code generator and a serialization API like capn proto, flatbuffers, avro etc.
 It uses a schema to generate (Java) code from it.
 This code can be used to create, read and write (data) objects.
 These objects can be stored, transmitted, read and modified.
 
-Sunshine tries to have a streamable, well defined data format
+Sunshine tries to have a streamable, well defined data format. 
 Porting to different languages should be easy.
 
 It also tries to create very usable code, so that it is usable in production even if it is not meant to be serialized.
