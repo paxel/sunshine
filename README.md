@@ -67,15 +67,16 @@ The number of dynamic values (members) of a single object is limited to 252.
 
 Objects can also be collected:
 
+* **Array\<Object>**: a Fixed List of Objects
 * **List\<Object>**: a variable List of Objects
 * **Optional\<Object>**: a special List of Objects, that is size 0 or 1
 
-**NOTE:** There is no Array for Object
-
 **NOTE:** The difference between a Dynamic Value and an Optional Value is following:
-An Optional Value has a ```public boolean hasNameOfValue() {}``` method and in case the value is not present will throw an Exception if you access the getter.
-A Dynamic Value that is not present will be null, 0, 0.0 or an empty List, which can make it indistinguishable between not present or set to that value.
-Currently it is not planned to allow for preset values other than constants.
+An Optional Value has a ```public boolean hasNameOfValue() {}``` method and in case the value is not present, will throw an Exception if you access the getter.
+A Dynamic Value that is not present will be null, 0, 0.0 or an empty List, which can make the default values indistinguishable from not present.
+But that might also be desired in some cases.
+
+**NOTE:** Currently it is not planned to allow for preset values other than constants.
 
 ### Schema
 
@@ -120,6 +121,21 @@ Object Engine {
   String name
 }
 ```
+
+**NOTE:** reordering members in the Schema will **always** lead to incompatibility between versions.
+Changing types can lead to incompatibility, if the new type has a different size.
+You can rename the value names however without any problems.
+It is recommended to rename replaced values to deprecatedValueName and add a new value at the end of the Object.
+
+```
+Object Tyre {
+  Bool deprecatedTubeless
+  UInt16 type   
+}
+```
+This change in Tyre would be compatible.
+Old versions of Tyre would not set type, but the new version could still support the old version by reading the deprecated value.
+New versions could write the type; but old versions could of course not access the value.
 
 
 ### Serialized Data
@@ -294,4 +310,88 @@ fd 04 00 00 00  77            | static block with 4 bytes value 0x00000077
 00                            | NOP (0x00). A NOP is a filler that tells the parser to ignore this byte and continue parsing with the next
 fe                            | End of Object
 fe                            | End of Message (because repeated)
+```
+
+
+## Runtime
+
+The Runtime library is needed for using the generated sunshine code in your project.
+It also provides some utils to read and write the serialized data.
+It provides also an API if you need to extend parts for your environment.
+
+You find the runtime code at [github](https://github.com/paxel/sunshine)
+
+### RandomAccessMemory
+
+The Runtime has an abstraction layer for accessing the memory containing the serialized data.
+Similar to capn proto and flatbuffers, it does not store data in members, but immediately serializes it into a defined memory portion.
+In the same way when deserializing it does not convert the data to valriables, but stores the read data in a format, that wrapper objects can parse and provide the information on demand.
+
+As there are some special memory implementations already in existence that do stuff differently than the ByteBuffers of the JDK (e.g. the ByteBuf of Netty) an abstraction interface was introduced to access the memory (depending on the use case Read Only (RO) or Read Write (RW)), so that with a simple wrapper around other Memory representations (e.g. RandomAccessFile) Sunshine can handle the data.
+
+#### ReadOnlyRandomAccessMemory (RO-RAM)
+
+This is used when deserializing a sunshine message from some input data (socket, file, etc.).
+The Frame or Message Reader reads a complete Message into a single RO-RAM instance (Or represents the existing data with a specific implementation of the RO-RAM)
+
+To describe what the responsibilities of the RO-RAM are we need to look at what actually happens when reading a Data Object:
+
+##### Reading the root Object.
+
+The first Object in a Message is the one that references all the embedded Objects (if any).
+Depending on the Message the root Object can be any Object in the Schema.
+To handle this in a simple and typesafe way, there is a MessageParser class available in the Runtime that is initialized with a mapping of Types and Functions.
+This will be explained in more detail later, what is important here is: The MessageParser needs to check if the object header (the first 9 bytes) are as expected:
+
+- at position 0 to 2 it reads the bytes 0x6F 0x62 0x6A.
+- at position 3 it reads 2 bytes as an UInt16 which is the message Type.
+- at position 5 it reads 4 bytes as an UInt32 that is expected to be 1 for the root Message.
+- it creates an ObjectMemoryHelper instance with position 10 and adds it to a map with the instance value 1
+- it reads through the T and TLV of the object until it finds the EOM.
+- it updates the ObjectMemoryHelper with useful information that it can use later if needed.
+  * position of the different value IDs.
+  * size of the object data.
+  * NOP ranges if any
+- it checks if that was the last object, otherwise it reads the next object.
+
+In the end it has a map of all objects and their position in the RO-RAM.
+
+The MessageParser has access to the compiled Schema, which provides a Lookup from ID to actual class.
+It uses a provided Factory to instantiate (or reuse, depending on the factory) an Instance of that object for the root object.
+The object instance receives an instance of the MessageParser that contains all the gained information (object IDs and their offsets and sizes, the ObjectMemoryHelper map and the RandomAccessMemory itself)
+
+Then the fully instantiated and initialized root message is given to the function that is in the
+Type and Functions Map of the MessageParser.
+
+This function is the entry to the user code. From here the DataObjects provide access to their members by the generated code, using the ObjectMemoryHelper as meta information to access the members and other classes from the Runtime.
+
+So the only thing the RO-RandomAccessMemory needs to do, is access memory at any position and provide the BasicType for that position. The BasicType at that position is defined by the schema or the generated code.
+
+So this could be the code for accessing a boolean
+```java
+public boolean isTubeless(){
+  return ram.getBoolean( helper.getStaticBlockStart()  +  1 /*offset in Static Block*/ );
+}
+```
+
+This could be the code to check if an Optional is available. And a probably not final version of getting a Tyre Member
+```java
+public boolean hasTyre(){
+  return helper.hasId(  3 /*ID for Tyre*/ );
+}
+
+public Tyre getTyre(Tyre tyre){
+  if (!hasTyre()){ throw new IllegalStateException ("Tyre not available")}
+  long pos = helper.getStart( 3 /*ID for Tyre*/);
+  Tlv<UInt32> tlv = ram.readUInt32Tlv(pos);
+  assert(tlv.type()== 3 /*ID for Tyre*/);
+  if (tyre == null){
+    tyre = new Tyre();
+  }
+  return (Tyre) helper.createObject(tlv.value(), tyre.init(ram,helper,tlv.value()));
+}
+
+public Tyre getTyre(){
+  return getTyre (null);
+}
 ```
