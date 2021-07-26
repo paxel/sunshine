@@ -171,7 +171,7 @@ The ID depends on the position of the object in the schema. starting with 1.
 
 ##### Static Block Value (Type 0xfd)
 
-```Format: TLV (1byte, 1byte, x bytes)```
+_Format: TLV (1byte, 1byte, x bytes)_
 
 Normally the header is immediately followed by the Static Block, if available.
 It consists of the Object Value type 0xfd, a length and the actual block bytes.
@@ -216,7 +216,7 @@ If they are NOT set, their value will be 0x00000000 which is a restricted value 
 
 ##### Dynamic Values (0x01 - 0xfc)
 
-```Format: TLV (1byte, 1byte, x bytes)```
+_Format: TLV (1byte, 1byte, x bytes)_
 
 The dynamic sized values are formatted like the following:
 
@@ -292,7 +292,7 @@ If you urgently need something like this, please define an object containing a L
 
 ##### NOP Value (0x00)
 
-```Format: T (1byte)```
+_Format: T (1byte)_
 
 There is a special NOP data format (0x00) that is used to tell the parser to ignore this byte.
 The purpose of this is to delete dynamic data without having to copy all following bytes to the deleted position.
@@ -300,12 +300,20 @@ NOPs can be added in any number to the message.
 
 **NOTE:** The object Builder will try to reuse NOP areas if possible.
 
+##### EOO Value (0xfe)
+
+_Format: T (1byte)_
+
+This Type defines the end of an object.
+It is either followed by a new object header or another EOO marking the end of the message (EOM).
+
+
 #### Small example of a fully framed message
 
 ```
 73 75 6E 00 00  00 15         | frame defining 21 bytes message (optional)
 6F 62 6A 00 01  00 00 00 01   | object type 1 instance 1
-fd 04 00 00 00  77            | static block with 4 bytes value 0x00000077
+FD 04 00 00 00  77            | static block with 4 bytes value 0x00000077
 01 01 65                      | Dynamic Value ID 1 size 1 value 0x65
 00                            | NOP (0x00). A NOP is a filler that tells the parser to ignore this byte and continue parsing with the next
 fe                            | End of Object
@@ -323,49 +331,166 @@ You find the runtime code at [github](https://github.com/paxel/sunshine)
 
 ### RandomAccessMemory
 
-The Runtime has an abstraction layer for accessing the memory containing the serialized data.
-Similar to capn proto and flatbuffers, it does not store data in members, but immediately serializes it into a defined memory portion.
-In the same way when deserializing it does not convert the data to valriables, but stores the read data in a format, that wrapper objects can parse and provide the information on demand.
 
-As there are some special memory implementations already in existence that do stuff differently than the ByteBuffers of the JDK (e.g. the ByteBuf of Netty) an abstraction interface was introduced to access the memory (depending on the use case Read Only (RO) or Read Write (RW)), so that with a simple wrapper around other Memory representations (e.g. RandomAccessFile) Sunshine can handle the data.
+The Runtime has an abstraction layer for accessing the memory containing the serialized data.
+The simplest interface only provides bytes and byte ranges at a defined position in the memory.
 
 #### ReadOnlyRandomAccessMemory (RO-RAM)
 
-This is used when deserializing a sunshine message from some input data (socket, file, etc.).
-The Frame or Message Reader reads a complete Message into a single RO-RAM instance (Or represents the existing data with a specific implementation of the RO-RAM)
+```Java
+ public byte getByteAt(long index);
+ public byte[] getBytesAt(long index);
+ public void writeBytesIntoArray(long index, int length, byte[] target, int offsetInArray);
+ public void writeBytesIntoByteBuffer(long index, int length, ByteBuffer target);
+ public <T> void writeBytesIntoGeneric(long index, int length, T target);
+ public long size();
+```
 
-To describe what the responsibilities of the RO-RAM are we need to look at what actually happens when reading a Data Object:
+More advanced implementations also provide the retrieval of the BasicTypes directly from the memory without converting it to byte arrays.
 
-##### Reading the root Object.
+```Java
+ public long getUInt32At(long index);
+```
 
-The first Object in a Message is the one that references all the embedded Objects (if any).
-Depending on the Message the root Object can be any Object in the Schema.
-To handle this in a simple and typesafe way, there is a MessageParser class available in the Runtime that is initialized with a mapping of Types and Functions.
-This will be explained in more detail later, what is important here is: The MessageParser needs to check if the object header (the first 9 bytes) are as expected:
+If the RandomAccessMemory does not provide these methods, it wraps the RAM with an implementation that provies these methods.
+
+#### ReadWriteRandomAccessMemory (RW-RAM)
+
+This interface in its simplest implementation allows to put byte and byte ranges at a defined position in the memory.
+
+```Java
+ public void getByteAt(long index);
+ public void writeBytesIntoRam(long index, byte[] source, int offsetInArray, int length);
+ public void writeBytesIntoRam(long index, ByteBuffer source);
+ public <T> void writeBytesIntoRam(long index, T target);
+ public long size();
+```
+
+In addition, the RW-RAM also needs to be able to extend the currently used memory in case not enough memory is allocated.
+This allocation looks like this:
+
+```Java
+ public long allocate(long size);
+```
+The parameter is the amount of data that is allocated and the return value is the amount of bytes the Memory is now in use.
+
+More advanced implementations also provide the writing of the BasicTypes directly to the memory without converting it to byte arrays.
+
+```Java
+ public void writeUInt32IntoRam(long index, long value);
+```
+
+**NOTE:** each allocation can be somewhere in the memory and will be put behind each other when serialized.
+
+Another requirement for the RandomAccessMemory is that it needs to be able to create lightweigth slices of itself.
+A slice of RAM is a new Instance of RandomAccessMemory that uses another RandomAccessMemory as Memory but with its own index (starting at 0) and appending its own Memory when new memory is allocated.
+
+The Runtime provides different Wrapper and a default implementation that can use ByteBuffers with internal and external memory.
+
+```
+[ReadOnlyRandomAccessMemory]    [RichReadOnlyRandomAccessMemory]
+   |                                 /
+   |                               /  
+[ReadWriteRandomAccessMemory]    /   [RichReadWriteRandomAccessMemory]
+    |                          /    /
+    |                        /    /
+   [ByteBufferRandomAccessMemory]
+```
+
+As there are some special memory implementations already in existence that do stuff differently than the ByteBuffers of the JDK (e.g. the ByteBuf of Netty) These interfaces and wrappers were introduced, to allow support for those.
+
+**NOTE:** the exact definition of the interfaces is WIP
+
+### MessageData
+
+This is the Meta data of a whole message.
+It has at least one ObjectData for the root element.
+It also has the compiled SchemaData.
+
+MessageData is generated in two ways: Either by reading a serialized Message, or by creating a Message with the Builder.
+It has no RandomAccessMemory itself
+
+### ObjectData
+
+For each Object in a Message an ObjectData instance exists.
+
+The ObjectData contains:
+* Information about the positions and existences of NOP, StaticBlock and Dynamic Values.
+* The RandomAccessMemory of the Object (with all required Wrappers)
+* The MessageData to access embedded ObjectData
+* The SchemaData
+
+The generated code will mainly interact with the ObjectData instance to get/set the user data to/from the RandomAccessMemory.
+
+### SchemaData
+
+This is generated code that contains the map between object ID and the Java Class representing the Object.
+It might also hold more data if required.
+
+### MessageHandlerRegistry
+
+The MessageHandlerRegistry is a registry where for each expected root Object type a method is added to be called by the MessageParser to initialize and handle the root object of a message.
+It is only used when deserializing existing messages.
+
+```java
+ public <T> void register(Class<T> key, Consumer<T> messageHandler, Supplier<T> instanceProvider );
+ public <T> void register(Class<T> key, Consumer<T> messageHandler);
+ public void fallback( Consumer<Object> messageHandler);
+```
+
+The key defines the Object Type (one of the objects in the Schema) that will be handled.
+The method (messageHandler) defines what is called, if the received Message is actual of the Objects type.
+The optional Supplier can be used to reuse a instance of T to reduce garbage collection.
+
+All Object Types that are not registered, will either be ignored or if available given to the fallback consumer.
+
+### FrameReader
+
+This is used to read framed sunshine messages.
+It parses the frame header and provides the frame size of the next frame.
+It can also be used to provide a RandomAccessMemory of the next Frame for various inputs.
+
+### MessageReader
+
+This is used to read sunshine messages.
+If the message is Framed, it uses the FrameReader, otherwise it reads the objects until EOM.
+Its outcome is a RandomAccessMemory of the next Frame for various inputs.
+
+**NOTE:** To use custom RandomAccessMemory implementations, it is probably required to implement either Frame- and/or MessageReader.
+
+### MessageParser
+
+The MessageParser takes a MessageHandlerRegistry, a SchemaData and a RandomAccessMemory containing a serialized to create a MessageData instance with all ObjectData instances.
+Then it initializes the root object and calls the registered Consumer in the MessageHandlerRegistry.
+
+#### Creating MessageData and ObjectData instances
+
+Similar to capn proto and flatbuffers, it does not store data in members, but immediately serializes it into a defined memory portion.
+In the same way when deserializing it does not convert the data to valriables, but stores the read data in a format, that wrapper objects can parse and provide the information on demand.
+
+The first Object in a Message is the one referencing all the embedded Objects (if any).
+The root Object can be any Object Type in the Schema.
+
+First a MessageData object is created.
+Then the first object is parsed:
 
 - at position 0 to 2 it reads the bytes 0x6F 0x62 0x6A.
 - at position 3 it reads 2 bytes as an UInt16 which is the message Type.
 - at position 5 it reads 4 bytes as an UInt32 that is expected to be 1 for the root Message.
-- it creates an ObjectMemoryHelper instance with position 10 and adds it to a map with the instance value 1
+- it creates an ObjectData instance
 - it reads through the T and TLV of the object until it finds the EOM.
-- it updates the ObjectMemoryHelper with useful information that it can use later if needed.
-  * position of the different value IDs.
-  * size of the object data.
+  * it updates the ObjectData with a RandomAccessMemory slice of the RandomAccessMemory containing all object memory.
+  * for all TLVs the positions of the different value IDs.
   * NOP ranges if any
+  * adds the ObjectData with its ID in the MessageData.
 - it checks if that was the last object, otherwise it reads the next object.
 
-In the end it has a map of all objects and their position in the RO-RAM.
+After all Objects have been parsed, The root object is initialized and given to the registered Consumer.
 
-The MessageParser has access to the compiled Schema, which provides a Lookup from ID to actual class.
-It uses a provided Factory to instantiate (or reuse, depending on the factory) an Instance of that object for the root object.
-The object instance receives an instance of the MessageParser that contains all the gained information (object IDs and their offsets and sizes, the ObjectMemoryHelper map and the RandomAccessMemory itself)
 
-Then the fully instantiated and initialized root message is given to the function that is in the
-Type and Functions Map of the MessageParser.
 
-This function is the entry to the user code. From here the DataObjects provide access to their members by the generated code, using the ObjectMemoryHelper as meta information to access the members and other classes from the Runtime.
+## Notes (to be used later)
 
-So the only thing the RO-RandomAccessMemory needs to do, is access memory at any position and provide the BasicType for that position. The BasicType at that position is defined by the schema or the generated code.
 
 So this could be the code for accessing a boolean
 ```java
