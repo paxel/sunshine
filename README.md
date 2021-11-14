@@ -341,8 +341,7 @@ The simplest interface only provides bytes and byte ranges at a defined position
  public byte getByteAt(long index);
  public byte[] getBytesAt(long index);
  public void writeBytesIntoArray(long index, int length, byte[] target, int offsetInArray);
- public void writeBytesIntoByteBuffer(long index, int length, ByteBuffer target);
- public <T> void writeBytesIntoGeneric(long index, int length, T target);
+ public <T> void writeBytesInto(long index, int length, T target);
  public long size();
 ```
 
