@@ -33,17 +33,38 @@ public class ByteBufferRoRam implements RichReadOnlyRandomAccessMemory {
 
 
     @Override
-    public void getBytesAt(long index, byte[] dst) {
-        requireNonNull(dst);
-        validate(index, dst.length);
-        byteBuffer.get(dst, (int) index, dst.length);
+    public void copyToDest(long index, byte[] dest) {
+        requireNonNull(dest);
+        validate(index, dest.length);
+        byteBuffer.position((int) index);
+        byteBuffer.get(dest, 0, dest.length);
     }
+
+    @Override
+    public void copyToDest(long index, byte[] dest, int destOffset, int length) {
+        requireNonNull(dest);
+        validate(index, length);
+        validate(dest,0,length);
+        byteBuffer.position((int) index);
+        byteBuffer.get(dest, destOffset, length);
+    }
+
+    private void validate(byte[] dest, int index, int length) {
+        if (index < 0)
+            throw new IllegalArgumentException("index was < 0 :" + index);
+        if (index > dest.length)
+            throw new IllegalArgumentException("index was > array " + dest.length + " :" + index);
+        if (index + length > dest.length)
+            throw new IllegalArgumentException(String.format("length %d after index was > array %d :%d", length, dest.length, index));
+    }
+
 
     @Override
     public byte[] getBytesAt(long index, int length) {
         validate(index, length);
         byte[] result = new byte[length];
-        byteBuffer.get(result, (int) index, length);
+        byteBuffer.position((int) index);
+        byteBuffer.get(result, 0, length);
         return result;
     }
 
@@ -59,26 +80,28 @@ public class ByteBufferRoRam implements RichReadOnlyRandomAccessMemory {
     }
 
     @Override
-    public <T> long writeBytesInto(long index, int length, T dst) throws IOException {
-        requireNonNull(dst);
+    public <T> long writeBytesToDest(long index, int length, T dest) throws IOException {
+        requireNonNull(dest);
         validate(index, length);
-        if (dst instanceof ByteBuffer) {
+        if (dest instanceof ByteBuffer) {
+            byteBuffer.position(0);
             ByteBuffer slice = byteBuffer.slice();
             slice.position((int) index);
             slice.limit((int) (index + length));
-            ((ByteBuffer) dst).put(slice);
+            ((ByteBuffer) dest).put(slice);
             return length;
-        } else if (dst instanceof OutputStream) {
-            WritableByteChannel writableByteChannel = Channels.newChannel((OutputStream) dst);
-            return writeBytesInto(index, length, writableByteChannel);
-        } else if (dst instanceof WritableByteChannel) {
+        } else if (dest instanceof OutputStream) {
+            WritableByteChannel writableByteChannel = Channels.newChannel((OutputStream) dest);
+            return writeBytesToDest(index, length, writableByteChannel);
+        } else if (dest instanceof WritableByteChannel) {
+            byteBuffer.position(0);
             ByteBuffer slice = byteBuffer.slice();
             slice.position((int) index);
             slice.limit((int) (index + length));
-            ((WritableByteChannel) dst).write(slice);
+            ((WritableByteChannel) dest).write(slice);
             return length;
         }
-        throw new IllegalArgumentException("Unsupported dst type " + dst.getClass());
+        throw new IllegalArgumentException("Unsupported dest type " + dest.getClass());
     }
 
     private void validate(long index, int length) {

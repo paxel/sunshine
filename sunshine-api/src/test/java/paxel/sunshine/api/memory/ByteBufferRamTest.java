@@ -2,11 +2,10 @@ package paxel.sunshine.api.memory;
 
 import org.junit.Test;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
+import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
+import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.nio.charset.StandardCharsets;
 
@@ -21,7 +20,7 @@ public class ByteBufferRamTest {
         ByteBuffer dst = ByteBuffer.allocate(6);
 
         assertThat(byteBufferRam.supportsSink(ByteBuffer.class), is(true));
-        long written = byteBufferRam.writeBytesInto(5, 6, dst);
+        long written = byteBufferRam.writeBytesToDest(5, 6, dst);
 
         assertThat(written, is(6L));
         assertThat(dst.get(0), is((byte) 'D'));
@@ -38,7 +37,7 @@ public class ByteBufferRamTest {
         ByteArrayOutputStream dst = new ByteArrayOutputStream();
 
         assertThat(byteBufferRam.supportsSink(OutputStream.class), is(true));
-        long written = byteBufferRam.writeBytesInto(5, 6, dst);
+        long written = byteBufferRam.writeBytesToDest(5, 6, dst);
         byte[] bytes = dst.toByteArray();
         assertThat(written, is(6L));
         assertThat(bytes.length, is(6));
@@ -56,7 +55,7 @@ public class ByteBufferRamTest {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         WritableByteChannel dst = Channels.newChannel(out);
         assertThat(byteBufferRam.supportsSink(WritableByteChannel.class), is(true));
-        long written = byteBufferRam.writeBytesInto(5, 6, dst);
+        long written = byteBufferRam.writeBytesToDest(5, 6, dst);
         byte[] bytes = out.toByteArray();
         assertThat(written, is(6L));
         assertThat(bytes.length, is(6));
@@ -67,5 +66,102 @@ public class ByteBufferRamTest {
         assertThat(bytes[4], is((byte) 'N'));
         assertThat(bytes[5], is((byte) 'O'));
     }
+
+    @Test
+    public void getByte() throws IOException {
+        ByteBufferRam byteBufferRam = new ByteBufferRam(ByteBuffer.wrap("ABBA-DOMINO-78".getBytes(StandardCharsets.UTF_8)));
+        assertThat(byteBufferRam.size(), is(14L));
+        assertThat(byteBufferRam.getByteAt(4), is((byte) '-'));
+        assertThat(byteBufferRam.getByteAt(11), is((byte) '-'));
+    }
+
+    @Test
+    public void getBytesAt() throws IOException {
+        ByteBufferRam byteBufferRam = new ByteBufferRam(ByteBuffer.wrap("ABBA-DOMINO-78".getBytes(StandardCharsets.UTF_8)));
+        byte[] bytesAt = byteBufferRam.getBytesAt(12, 2);
+
+        assertThat(new String(bytesAt), is("78"));
+    }
+
+    @Test
+    public void getBytes() throws IOException {
+        ByteBufferRam byteBufferRam = new ByteBufferRam(ByteBuffer.wrap("ABBA-DOMINO-78".getBytes(StandardCharsets.UTF_8)));
+        byte[] dest = new byte[4];
+        byteBufferRam.copyToDest(0, dest);
+        assertThat(new String(dest), is("ABBA"));
+    }
+
+    @Test
+    public void getBytes2() throws IOException {
+        ByteBufferRam byteBufferRam = new ByteBufferRam(ByteBuffer.wrap("ABBA-DOMINO-78".getBytes(StandardCharsets.UTF_8)));
+        byte[] dest = new byte[4];
+        byteBufferRam.copyToDest(7, dest);
+        assertThat(new String(dest), is("MINO"));
+    }
+
+
+    @Test
+    public void getBytesLength() throws IOException {
+        ByteBufferRam byteBufferRam = new ByteBufferRam(ByteBuffer.wrap("ABBA-DOMINO-78".getBytes(StandardCharsets.UTF_8)));
+        byte[] dest = new byte[6];
+        byteBufferRam.copyToDest(0, dest, 0, 2);
+        byteBufferRam.copyToDest(5, dest, 2, 2);
+        byteBufferRam.copyToDest(12, dest, 4, 2);
+        assertThat(new String(dest), is("ABDO78"));
+    }
+
+    @Test
+    public void putByte() throws IOException {
+        ByteBufferRam byteBufferRam = new ByteBufferRam(ByteBuffer.wrap("ABBA-DOMINO-78".getBytes(StandardCharsets.UTF_8)));
+        byteBufferRam.putByteAt(0, (byte) '+');
+        assertThat(byteBufferRam.getByteAt(0), is((byte) '+'));
+    }
+
+    @Test
+    public void putByte2() throws IOException {
+        ByteBufferRam byteBufferRam = new ByteBufferRam(ByteBuffer.wrap("ABBA-DOMINO-78".getBytes(StandardCharsets.UTF_8)));
+        byteBufferRam.putByteAt(13, (byte) '+');
+        assertThat(byteBufferRam.getByteAt(13), is((byte) '+'));
+    }
+
+    @Test
+    public void copyFromBytes() throws IOException {
+        ByteBufferRam byteBufferRam = new ByteBufferRam(ByteBuffer.wrap("ABBA-DOMINO-78".getBytes(StandardCharsets.UTF_8)));
+        byteBufferRam.copyFromSource(0, "OLDI".getBytes(StandardCharsets.UTF_8), 0, 4);
+        assertThat(byteBufferRam.getBytesAt(0L, 4), is("OLDI".getBytes(StandardCharsets.UTF_8)));
+    }
+
+    @Test
+    public void copyFromByteBuffer() throws IOException {
+        ByteBufferRam byteBufferRam = new ByteBufferRam(ByteBuffer.wrap("ABBA-DOMINO-78".getBytes(StandardCharsets.UTF_8)));
+        ByteBuffer source = ByteBuffer.wrap("ANTIANTI".getBytes(StandardCharsets.UTF_8));
+
+        assertThat(byteBufferRam.supportsSource(ByteBuffer.class), is(true));
+
+        byteBufferRam.copyFromSource(0, source.limit(6).position(2));
+        assertThat(byteBufferRam.getBytesAt(0L, 5), is("TIAN-".getBytes(StandardCharsets.UTF_8)));
+    }
+
+    @Test
+    public void copyFromInputStream() throws IOException {
+        ByteBufferRam byteBufferRam = new ByteBufferRam(ByteBuffer.wrap("ABBA-DOMINO-78".getBytes(StandardCharsets.UTF_8)));
+        ByteArrayInputStream source = new ByteArrayInputStream("TINA".getBytes(StandardCharsets.UTF_8));
+        assertThat(byteBufferRam.supportsSource(InputStream.class), is(true));
+
+        byteBufferRam.copyFromSource(0, source);
+        assertThat(byteBufferRam.getBytesAt(0L, 5), is("TINA-".getBytes(StandardCharsets.UTF_8)));
+    }
+
+    @Test
+    public void copyFromReadableChannel() throws IOException {
+        ByteBufferRam byteBufferRam = new ByteBufferRam(ByteBuffer.wrap("ABBA-DOMINO-78".getBytes(StandardCharsets.UTF_8)));
+        ByteArrayInputStream stream = new ByteArrayInputStream("TINA".getBytes(StandardCharsets.UTF_8));
+        ReadableByteChannel source = Channels.newChannel(stream);
+        assertThat(byteBufferRam.supportsSource(ReadableByteChannel.class), is(true));
+
+        byteBufferRam.copyFromSource(0, source);
+        assertThat(byteBufferRam.getBytesAt(0L, 5), is("TINA-".getBytes(StandardCharsets.UTF_8)));
+    }
+
 
 }

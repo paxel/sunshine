@@ -24,8 +24,13 @@ public class ByteBufferRam implements RichReadWriteRandomAccessMemory {
     }
 
     @Override
-    public void getBytesAt(long index, byte[] dst) {
-        roRam.getBytesAt(index, dst);
+    public void copyToDest(long index, byte[] dest) {
+        roRam.copyToDest(index, dest);
+    }
+
+    @Override
+    public void copyToDest(long index, byte[] dest, int destOffset, int length) {
+        roRam.copyToDest(index, dest, destOffset, length);
     }
 
     @Override
@@ -39,8 +44,8 @@ public class ByteBufferRam implements RichReadWriteRandomAccessMemory {
     }
 
     @Override
-    public <T> long writeBytesInto(long index, int length, T dst) throws IOException {
-        return roRam.writeBytesInto(index, length, dst);
+    public <T> long writeBytesToDest(long index, int length, T dest) throws IOException {
+        return roRam.writeBytesToDest(index, length, dest);
     }
 
     @Override
@@ -55,13 +60,11 @@ public class ByteBufferRam implements RichReadWriteRandomAccessMemory {
     }
 
     @Override
-    public void writeBytesIntoRam(long index, byte[] source, int offsetInArray, int length) {
+    public void copyFromSource(long index, byte[] source, int offsetInArray, int length) {
         requireNonNull(source);
         validate(index);
-        // we try to keep the internal position as it was
         byteBuffer.position((int) index);
         byteBuffer.put(source, offsetInArray, length);
-        byteBuffer.position(0);
     }
 
     @Override
@@ -77,23 +80,21 @@ public class ByteBufferRam implements RichReadWriteRandomAccessMemory {
     }
 
     @Override
-    public <T> long writeBytesIntoRam(long index, T source) throws IOException {
+    public <T> long copyFromSource(long index, T source) throws IOException {
         requireNonNull(source);
         validate(index);
         if (source instanceof ByteBuffer) {
             byteBuffer.position((int) index);
             byteBuffer.put((ByteBuffer) source);
             int position = byteBuffer.position();
-            byteBuffer.position(0);
             return position - index;
         } else if (source instanceof InputStream) {
             ReadableByteChannel readableByteChannel = Channels.newChannel((InputStream) source);
-            return writeBytesIntoRam(index, source);
+            return copyFromSource(index, readableByteChannel);
         } else if (source instanceof ReadableByteChannel) {
             byteBuffer.position((int) index);
             int read = ((ReadableByteChannel) source).read(byteBuffer);
             int position = byteBuffer.position();
-            byteBuffer.position(0);
             return position - index;
         }
         throw new IllegalArgumentException("Unsupported source type " + source.getClass());
