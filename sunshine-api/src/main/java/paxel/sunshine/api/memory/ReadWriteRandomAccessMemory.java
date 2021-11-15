@@ -10,7 +10,7 @@ public interface ReadWriteRandomAccessMemory extends ReadOnlyRandomAccessMemory 
      * @param value The new value at the index.
      * @throws IndexOutOfBoundsException in case the index is less than 0 or bigger than the RAM.
      */
-    public void putByteAt(long index, byte value);
+    void putByteAt(long index, byte value);
 
     /**
      * Reads parts of the given array into the RandomAccessMemory
@@ -23,7 +23,7 @@ public interface ReadWriteRandomAccessMemory extends ReadOnlyRandomAccessMemory 
      * @throws IllegalArgumentException  in case the offset is less than 0 or bigger than the source or the length is bigger than the remaining bytes in the source.
      * @throws NullPointerException      in case the source is null.
      */
-    public void copyFromSource(long index, byte[] source, int offsetInArray, int length);
+    void copyFromSource(long index, byte[] source, int offsetInArray, int length);
 
     /**
      * Checks is the given type of source is supported.
@@ -31,7 +31,7 @@ public interface ReadWriteRandomAccessMemory extends ReadOnlyRandomAccessMemory 
      * @param source The source type.
      * @return {@code true} in case the {@link #copyFromSource(long, Object)} will accept instances of the given source.
      */
-    public boolean supportsSource(Class<?> source);
+    boolean supportsSource(Class<?> source);
 
     /**
      * Reads Bytes into the RandomAccessMemory. The amount is defined by the Source and the size of the RAM.
@@ -42,5 +42,5 @@ public interface ReadWriteRandomAccessMemory extends ReadOnlyRandomAccessMemory 
      * @return the number of bytes put at index.
      * @throws IOException in case the source causes it.
      */
-    public <T> long copyFromSource(long index, T source) throws IOException;
+    <T> long copyFromSource(long index, T source) throws IOException;
 }

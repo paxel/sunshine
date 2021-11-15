@@ -24,13 +24,13 @@ public class ByteBufferRam implements RichReadWriteRandomAccessMemory {
     }
 
     @Override
-    public void copyToDest(long index, byte[] dest) {
-        roRam.copyToDest(index, dest);
+    public void copyToDestination(long index, byte[] destination) {
+        roRam.copyToDestination(index, destination);
     }
 
     @Override
-    public void copyToDest(long index, byte[] dest, int destOffset, int length) {
-        roRam.copyToDest(index, dest, destOffset, length);
+    public void copyToDestination(long index, byte[] destination, int destinationOffset, int length) {
+        roRam.copyToDestination(index, destination, destinationOffset, length);
     }
 
     @Override
@@ -39,13 +39,13 @@ public class ByteBufferRam implements RichReadWriteRandomAccessMemory {
     }
 
     @Override
-    public boolean supportsSink(Class<?> sink) {
-        return roRam.supportsSink(sink);
+    public boolean supportsDestination(Class<?> destinationClass) {
+        return roRam.supportsDestination(destinationClass);
     }
 
     @Override
-    public <T> long writeBytesToDest(long index, int length, T dest) throws IOException {
-        return roRam.writeBytesToDest(index, length, dest);
+    public <T> long copyToDestination(long index, int length, T destination) throws IOException {
+        return roRam.copyToDestination(index, length, destination);
     }
 
     @Override

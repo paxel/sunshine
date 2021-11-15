@@ -33,29 +33,29 @@ public class ByteBufferRoRam implements RichReadOnlyRandomAccessMemory {
 
 
     @Override
-    public void copyToDest(long index, byte[] dest) {
-        requireNonNull(dest);
-        validate(index, dest.length);
+    public void copyToDestination(long index, byte[] destination) {
+        requireNonNull(destination);
+        validate(index, destination.length);
         byteBuffer.position((int) index);
-        byteBuffer.get(dest, 0, dest.length);
+        byteBuffer.get(destination, 0, destination.length);
     }
 
     @Override
-    public void copyToDest(long index, byte[] dest, int destOffset, int length) {
-        requireNonNull(dest);
+    public void copyToDestination(long index, byte[] destination, int destinationOffset, int length) {
+        requireNonNull(destination);
         validate(index, length);
-        validate(dest,0,length);
+        validate(destination,0,length);
         byteBuffer.position((int) index);
-        byteBuffer.get(dest, destOffset, length);
+        byteBuffer.get(destination, destinationOffset, length);
     }
 
-    private void validate(byte[] dest, int index, int length) {
+    private void validate(byte[] destination, int index, int length) {
         if (index < 0)
             throw new IllegalArgumentException("index was < 0 :" + index);
-        if (index > dest.length)
-            throw new IllegalArgumentException("index was > array " + dest.length + " :" + index);
-        if (index + length > dest.length)
-            throw new IllegalArgumentException(String.format("length %d after index was > array %d :%d", length, dest.length, index));
+        if (index > destination.length)
+            throw new IllegalArgumentException("index was > array " + destination.length + " :" + index);
+        if (index + length > destination.length)
+            throw new IllegalArgumentException(String.format("length %d after index was > array %d :%d", length, destination.length, index));
     }
 
 
@@ -69,39 +69,39 @@ public class ByteBufferRoRam implements RichReadOnlyRandomAccessMemory {
     }
 
     @Override
-    public boolean supportsSink(Class<?> sink) {
-        if (sink.isAssignableFrom(ByteBuffer.class))
+    public boolean supportsDestination(Class<?> destinationClass) {
+        if (destinationClass.isAssignableFrom(ByteBuffer.class))
             return true;
-        if (sink.isAssignableFrom(OutputStream.class))
+        if (destinationClass.isAssignableFrom(OutputStream.class))
             return true;
-        if (sink.isAssignableFrom(WritableByteChannel.class))
+        if (destinationClass.isAssignableFrom(WritableByteChannel.class))
             return true;
         return false;
     }
 
     @Override
-    public <T> long writeBytesToDest(long index, int length, T dest) throws IOException {
-        requireNonNull(dest);
+    public <T> long copyToDestination(long index, int length, T destination) throws IOException {
+        requireNonNull(destination);
         validate(index, length);
-        if (dest instanceof ByteBuffer) {
+        if (destination instanceof ByteBuffer) {
             byteBuffer.position(0);
             ByteBuffer slice = byteBuffer.slice();
             slice.position((int) index);
             slice.limit((int) (index + length));
-            ((ByteBuffer) dest).put(slice);
+            ((ByteBuffer) destination).put(slice);
             return length;
-        } else if (dest instanceof OutputStream) {
-            WritableByteChannel writableByteChannel = Channels.newChannel((OutputStream) dest);
-            return writeBytesToDest(index, length, writableByteChannel);
-        } else if (dest instanceof WritableByteChannel) {
+        } else if (destination instanceof OutputStream) {
+            WritableByteChannel writableByteChannel = Channels.newChannel((OutputStream) destination);
+            return copyToDestination(index, length, writableByteChannel);
+        } else if (destination instanceof WritableByteChannel) {
             byteBuffer.position(0);
             ByteBuffer slice = byteBuffer.slice();
             slice.position((int) index);
             slice.limit((int) (index + length));
-            ((WritableByteChannel) dest).write(slice);
+            ((WritableByteChannel) destination).write(slice);
             return length;
         }
-        throw new IllegalArgumentException("Unsupported dest type " + dest.getClass());
+        throw new IllegalArgumentException("Unsupported destination type " + destination.getClass());
     }
 
     private void validate(long index, int length) {

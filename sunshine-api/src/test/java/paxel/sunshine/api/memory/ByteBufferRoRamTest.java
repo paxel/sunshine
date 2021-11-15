@@ -20,8 +20,8 @@ public class ByteBufferRoRamTest {
         ByteBufferRoRam byteBufferRam = new ByteBufferRoRam(ByteBuffer.wrap("ABBA-DOMINO-78".getBytes(StandardCharsets.UTF_8)));
         ByteBuffer dst = ByteBuffer.allocate(6);
 
-        assertThat(byteBufferRam.supportsSink(ByteBuffer.class), is(true));
-        long written = byteBufferRam.writeBytesToDest(5, 6, dst);
+        assertThat(byteBufferRam.supportsDestination(ByteBuffer.class), is(true));
+        long written = byteBufferRam.copyToDestination(5, 6, dst);
 
         assertThat(written, is(6L));
         assertThat(dst.get(0), is((byte) 'D'));
@@ -37,8 +37,8 @@ public class ByteBufferRoRamTest {
         ByteBufferRoRam byteBufferRam = new ByteBufferRoRam(ByteBuffer.wrap("ABBA-DOMINO-78".getBytes(StandardCharsets.UTF_8)));
         ByteArrayOutputStream dst = new ByteArrayOutputStream();
 
-        assertThat(byteBufferRam.supportsSink(OutputStream.class), is(true));
-        long written = byteBufferRam.writeBytesToDest(5, 6, dst);
+        assertThat(byteBufferRam.supportsDestination(OutputStream.class), is(true));
+        long written = byteBufferRam.copyToDestination(5, 6, dst);
         byte[] bytes = dst.toByteArray();
         assertThat(written, is(6L));
         assertThat(bytes.length, is(6));
@@ -55,8 +55,8 @@ public class ByteBufferRoRamTest {
         ByteBufferRoRam byteBufferRam = new ByteBufferRoRam(ByteBuffer.wrap("ABBA-DOMINO-78".getBytes(StandardCharsets.UTF_8)));
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         WritableByteChannel dst = Channels.newChannel(out);
-        assertThat(byteBufferRam.supportsSink(WritableByteChannel.class), is(true));
-        long written = byteBufferRam.writeBytesToDest(5, 6, dst);
+        assertThat(byteBufferRam.supportsDestination(WritableByteChannel.class), is(true));
+        long written = byteBufferRam.copyToDestination(5, 6, dst);
         byte[] bytes = out.toByteArray();
         assertThat(written, is(6L));
         assertThat(bytes.length, is(6));
@@ -88,7 +88,7 @@ public class ByteBufferRoRamTest {
     public void getBytes() throws IOException {
         ByteBufferRoRam byteBufferRam = new ByteBufferRoRam(ByteBuffer.wrap("ABBA-DOMINO-78".getBytes(StandardCharsets.UTF_8)));
         byte[] dest = new byte[4];
-        byteBufferRam.copyToDest(0, dest);
+        byteBufferRam.copyToDestination(0, dest);
         assertThat(new String(dest), is("ABBA"));
     }
 
@@ -96,7 +96,7 @@ public class ByteBufferRoRamTest {
     public void getBytes2() throws IOException {
         ByteBufferRoRam byteBufferRam = new ByteBufferRoRam(ByteBuffer.wrap("ABBA-DOMINO-78".getBytes(StandardCharsets.UTF_8)));
         byte[] dest = new byte[4];
-        byteBufferRam.copyToDest(7, dest);
+        byteBufferRam.copyToDestination(7, dest);
         assertThat(new String(dest), is("MINO"));
     }
 
@@ -105,9 +105,9 @@ public class ByteBufferRoRamTest {
     public void getBytesLength() throws IOException {
         ByteBufferRoRam byteBufferRam = new ByteBufferRoRam(ByteBuffer.wrap("ABBA-DOMINO-78".getBytes(StandardCharsets.UTF_8)));
         byte[] dest = new byte[6];
-        byteBufferRam.copyToDest(0, dest, 0, 2);
-        byteBufferRam.copyToDest(5, dest, 2, 2);
-        byteBufferRam.copyToDest(12, dest, 4, 2);
+        byteBufferRam.copyToDestination(0, dest, 0, 2);
+        byteBufferRam.copyToDestination(5, dest, 2, 2);
+        byteBufferRam.copyToDestination(12, dest, 4, 2);
         assertThat(new String(dest), is("ABDO78"));
     }
 
