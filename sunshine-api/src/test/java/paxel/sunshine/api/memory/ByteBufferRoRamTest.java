@@ -1,6 +1,7 @@
 package paxel.sunshine.api.memory;
 
 import org.junit.Test;
+import paxel.sunshine.api.datatypes.ULong;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -111,4 +112,67 @@ public class ByteBufferRoRamTest {
         assertThat(new String(dest), is("ABDO78"));
     }
 
+    @Test
+    public void getUByte() throws IOException {
+        ByteBuffer b = getByteBuffer();
+        ByteBufferRoRam byteBufferRam = new ByteBufferRoRam(b);
+        assertThat(byteBufferRam.getUByteAt(0), is((short) 0xff));
+        assertThat(byteBufferRam.getUByteAt(10), is((short) 0xff));
+    }
+
+    @Test
+    public void getInt16() throws IOException {
+        ByteBuffer b = getByteBuffer();
+        ByteBufferRoRam byteBufferRam = new ByteBufferRoRam(b);
+        assertThat(byteBufferRam.getInt16At(0), is((short) 0xffff));
+        assertThat(byteBufferRam.getInt16At(10), is((short) 0xffff));
+    }
+
+    @Test
+    public void getUInt16() throws IOException {
+        ByteBuffer b = getByteBuffer();
+        ByteBufferRoRam byteBufferRam = new ByteBufferRoRam(b);
+        assertThat(byteBufferRam.getUInt16At(0), is(0xffff));
+        assertThat(byteBufferRam.getUInt16At(10), is(0xffff));
+    }
+
+    @Test
+    public void getInt32() throws IOException {
+        ByteBuffer b = getByteBuffer();
+        ByteBufferRoRam byteBufferRam = new ByteBufferRoRam(b);
+        assertThat(byteBufferRam.getInt32At(0), is(0xffff_ffff));
+        assertThat(byteBufferRam.getInt32At(10), is(0xffff_ffff));
+    }
+
+    @Test
+    public void getUInt32() throws IOException {
+        ByteBuffer b = getByteBuffer();
+        ByteBufferRoRam byteBufferRam = new ByteBufferRoRam(b);
+        assertThat(byteBufferRam.getUInt32At(0), is(0xffff_ffffL));
+        assertThat(byteBufferRam.getUInt32At(10), is(0xffff_ffffL));
+    }
+
+    @Test
+    public void getInt64() throws IOException {
+        ByteBuffer b = getByteBuffer();
+        ByteBufferRoRam byteBufferRam = new ByteBufferRoRam(b);
+        assertThat(byteBufferRam.getInt64At(0), is(0xffff_ffffffff_ffffL));
+        assertThat(byteBufferRam.getInt64At(10), is(0xffff_ffffffff_ffffL));
+    }
+
+    @Test
+    public void getUInt64() throws IOException {
+        ByteBuffer b = getByteBuffer();
+        ByteBufferRoRam byteBufferRam = new ByteBufferRoRam(b);
+        assertThat(byteBufferRam.getUInt64At(0), is(new ULong(0xffff_ffffffff_ffffL)));
+        assertThat(byteBufferRam.getUInt64At(10), is(new ULong(0xffff_ffffffff_ffffL)));
+    }
+
+    private ByteBuffer getByteBuffer() {
+        ByteBuffer b = ByteBuffer.allocate(100);
+        for (int i = 0; i < 80; i++)
+            b.put((byte) 0xff);
+        b.put("ABCDEFGHIJKLM".getBytes(StandardCharsets.UTF_8));
+        return b;
+    }
 }

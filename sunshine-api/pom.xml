@@ -8,7 +8,7 @@
         <artifactId>sunshine-main</artifactId>
     </parent>
     <artifactId>sunshine-api</artifactId>
-
+    <packaging>bundle</packaging>
     <name>Sunshine - 001 API</name>
 
 </project>

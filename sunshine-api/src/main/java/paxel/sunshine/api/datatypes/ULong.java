@@ -1,5 +1,7 @@
 package paxel.sunshine.api.datatypes;
 
+import java.util.Objects;
+
 /**
  * This represents the missing datatype of an unsigned long using a signed long.
  */
@@ -38,5 +40,16 @@ public class ULong implements Comparable<ULong> {
         return signedValue < 0;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        ULong uLong = (ULong) o;
+        return signedValue == uLong.signedValue;
+    }
 
+    @Override
+    public int hashCode() {
+        return Objects.hash(signedValue);
+    }
 }

@@ -1,10 +1,13 @@
 package paxel.sunshine.api.memory;
 
+import paxel.sunshine.api.datatypes.ULong;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
+import java.nio.charset.StandardCharsets;
 
 import static java.util.Objects.requireNonNull;
 
@@ -44,7 +47,7 @@ public class ByteBufferRoRam implements RichReadOnlyRandomAccessMemory {
     public void copyToDestination(long index, byte[] destination, int destinationOffset, int length) {
         requireNonNull(destination);
         validate(index, length);
-        validate(destination,0,length);
+        validate(destination, 0, length);
         byteBuffer.position((int) index);
         byteBuffer.get(destination, destinationOffset, length);
     }
@@ -118,5 +121,66 @@ public class ByteBufferRoRam implements RichReadOnlyRandomAccessMemory {
     @Override
     public long size() {
         return byteBuffer.limit();
+    }
+
+    @Override
+    public short getUByteAt(long index) {
+        return (short) (byteBuffer.get((int) index) & 0xff);
+    }
+
+    @Override
+    public short getInt16At(long index) {
+        return byteBuffer.getShort((int) index);
+    }
+
+    @Override
+    public int getUInt16At(long index) {
+        return ((int) byteBuffer.getShort((int) index)) & 0xffff;
+    }
+
+    @Override
+    public int getInt32At(long index) {
+        return byteBuffer.getInt((int) index);
+    }
+
+    @Override
+    public long getUInt32At(long index) {
+        return Integer.toUnsignedLong(byteBuffer.getInt((int) index));
+    }
+
+    @Override
+    public long getInt64At(long index) {
+        return byteBuffer.getLong((int) index);
+    }
+
+    @Override
+    public ULong getUInt64At(long index) {
+        return new ULong(byteBuffer.getLong((int) index));
+    }
+
+    @Override
+    public float getFloatAt(long index) {
+        return byteBuffer.getFloat((int) index);
+    }
+
+    @Override
+    public double getDoubleAt(long index) {
+        return byteBuffer.getDouble((int) index);
+    }
+
+    @Override
+    public String getStringAt(long index, int length) {
+        byte[] bytes = new byte[length];
+        byteBuffer.position((int) index);
+        byteBuffer.get(bytes);
+        return new String(bytes, StandardCharsets.UTF_8);
+    }
+
+    @Override
+    public ReadOnlyRandomAccessMemory getDataAt(long index, int length) {
+        byteBuffer.position((int) index);
+        ByteBuffer slice = byteBuffer.slice();
+        slice.limit(length);
+        return new ByteBufferRoRam(slice);
     }
 }
