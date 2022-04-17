@@ -2,3 +2,5 @@
 **/target/
 **/generated/
 **/*.iml
+
+sunshine.jar

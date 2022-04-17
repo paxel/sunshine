@@ -5,6 +5,9 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
+import java.nio.charset.StandardCharsets;
+
+import paxel.sunshine.api.datatypes.ULong;
 
 import static java.util.Objects.requireNonNull;
 
@@ -93,7 +96,7 @@ public class ByteBufferRam implements RichReadWriteRandomAccessMemory {
             return copyFromSource(index, readableByteChannel);
         } else if (source instanceof ReadableByteChannel) {
             byteBuffer.position((int) index);
-            int read = ((ReadableByteChannel) source).read(byteBuffer);
+            ((ReadableByteChannel) source).read(byteBuffer);
             int position = byteBuffer.position();
             return position - index;
         }
@@ -107,5 +110,72 @@ public class ByteBufferRam implements RichReadWriteRandomAccessMemory {
             throw new IndexOutOfBoundsException("index was < 0 :" + index);
         if (index > byteBuffer.limit())
             throw new IndexOutOfBoundsException("index was > limit " + byteBuffer.limit() + " :" + index);
+    }
+
+    @Override
+    public void putUByteAt(long index, short value) {
+        byteBuffer.putShort((int) index, value);
+    }
+
+    @Override
+    public void putInt16At(long index, short value) {
+        byteBuffer.putShort((int) index, value);
+    }
+
+    @Override
+    public void putUInt16At(long index, int value) {
+        byteBuffer.putInt((int) index, value);
+    }
+
+    @Override
+    public void putInt32At(long index, int value) {
+        byteBuffer.putInt((int) index, value);
+    }
+
+    @Override
+    public void putUInt32At(long index, long value) {
+        byteBuffer.putLong((int) index, value);
+    }
+
+    @Override
+    public void putInt64At(long index, long value) {
+        byteBuffer.putLong((int) index, value);
+    }
+
+    @Override
+    public void putUInt64At(long index, ULong value) {
+        byteBuffer.putLong((int) index, value.getSignedValue());
+    }
+
+    @Override
+    public void putFloatAt(long index, float value) {
+        byteBuffer.putFloat((int) index, value);
+    }
+
+    @Override
+    public void putDoubleAt(long index, double value) {
+        byteBuffer.putDouble((int) index, value);
+    }
+
+    @Override
+    public void putStringAt(long index, CharSequence value) {
+        byteBuffer.position((int) index);
+        byteBuffer.put(value.toString().getBytes(StandardCharsets.UTF_8));
+    }
+
+    @Override
+    public void putStringAt(long index, CharSequence value, int offset, int length) {
+        byteBuffer.position((int) index);
+        byteBuffer.put(value.toString().substring(offset, offset+length).getBytes(StandardCharsets.UTF_8));
+    }
+
+    @Override
+    public void putDataAt(long index, ReadOnlyRandomAccessMemory value) {
+        // TODO
+    }
+
+    @Override
+    public void putDataAt(long index, ReadOnlyRandomAccessMemory value, int offset, int length) {
+        // TODO
     }
 }
