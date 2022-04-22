@@ -1,8 +1,5 @@
 package paxel.sunshine.api.memory.bytebuffer;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.core.Is.is;
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -13,8 +10,11 @@ import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.nio.charset.StandardCharsets;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.core.Is.is;
 
 import org.junit.Test;
+import paxel.sunshine.api.datatypes.ULong;
 
 public class ByteBufferRamTest {
 
@@ -103,7 +103,6 @@ public class ByteBufferRamTest {
         assertThat(new String(dest), is("MINO"));
     }
 
-
     @Test
     public void getBytesLength() throws IOException {
         ByteBufferRam byteBufferRam = new ByteBufferRam(ByteBuffer.wrap("ABBA-DOMINO-78".getBytes(StandardCharsets.UTF_8)));
@@ -112,6 +111,76 @@ public class ByteBufferRamTest {
         byteBufferRam.copyToDestination(5, dest, 2, 2);
         byteBufferRam.copyToDestination(12, dest, 4, 2);
         assertThat(new String(dest), is("ABDO78"));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testInvalidTarget() throws IOException {
+        ByteBufferRam byteBufferRam = new ByteBufferRam(
+                ByteBuffer.wrap("ABBA-DOMINO-78".getBytes(StandardCharsets.UTF_8)));
+        byte[] dest = new byte[6];
+        byteBufferRam.copyToDestination(0, dest, -1, 2);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testInvalidTarget2() throws IOException {
+        ByteBufferRam byteBufferRam = new ByteBufferRam(
+                ByteBuffer.wrap("ABBA-DOMINO-78".getBytes(StandardCharsets.UTF_8)));
+        byte[] dest = new byte[6];
+        byteBufferRam.copyToDestination(0, dest, 0, 12);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testInvalidTarget3() throws IOException {
+        ByteBufferRam byteBufferRam = new ByteBufferRam(
+                ByteBuffer.wrap("ABBA-DOMINO-78".getBytes(StandardCharsets.UTF_8)));
+        byte[] dest = new byte[6];
+        byteBufferRam.copyToDestination(0, dest, 6, 1);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testInvalidTarget4() throws IOException {
+        ByteBufferRam byteBufferRam = new ByteBufferRam(
+                ByteBuffer.wrap("ABBA-DOMINO-78".getBytes(StandardCharsets.UTF_8)));
+        byte[] dest = new byte[6];
+        byteBufferRam.copyToDestination(-1, dest, 6, 1);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testInvalidTarget5() throws IOException {
+        ByteBufferRam byteBufferRam = new ByteBufferRam(
+                ByteBuffer.wrap("ABBA-DOMINO-78".getBytes(StandardCharsets.UTF_8)));
+        byte[] dest = new byte[6];
+        byteBufferRam.copyToDestination(20, dest, 6, 1);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testInvalidTarget6() throws IOException {
+        ByteBufferRam byteBufferRam = new ByteBufferRam(
+                ByteBuffer.wrap("ABBA-DOMINO-78".getBytes(StandardCharsets.UTF_8)));
+        byte[] dest = new byte[6];
+        byteBufferRam.copyToDestination(Integer.MAX_VALUE + 1L, dest, 6, 1);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testInvalidTarget7() throws IOException {
+        ByteBufferRam byteBufferRam = new ByteBufferRam(
+                ByteBuffer.wrap("ABBA-DOMINO-78".getBytes(StandardCharsets.UTF_8)));
+        byte[] dest = new byte[6];
+        byteBufferRam.copyToDestination(12, dest, 6, 3);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testStringBufferTarget() throws IOException {
+        ByteBufferRam byteBufferRam = new ByteBufferRam(
+                ByteBuffer.wrap("ABBA-DOMINO-78".getBytes(StandardCharsets.UTF_8)));
+        byteBufferRam.copyToDestination(0, 0, new StringBuffer());
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testStringBufferSource() throws IOException {
+        ByteBufferRam byteBufferRam = new ByteBufferRam(
+                ByteBuffer.wrap("ABBA-DOMINO-78".getBytes(StandardCharsets.UTF_8)));
+        byteBufferRam.copyFromSource(0, new StringBuffer());
     }
 
     @Test
@@ -167,5 +236,118 @@ public class ByteBufferRamTest {
         assertThat(byteBufferRam.getBytesAt(0L, 5), is("TINA-".getBytes(StandardCharsets.UTF_8)));
     }
 
+    @Test
+    public void testStringBufferTargetNotSupported() throws IOException {
+        ByteBufferRam byteBufferRam = new ByteBufferRam(
+                ByteBuffer.wrap("ABBA-DOMINO-78".getBytes(StandardCharsets.UTF_8)));
+        assertThat(byteBufferRam.supportsDestination(StringBuffer.class), is(false));
+    }
 
+    @Test
+    public void testStringBufferSourceNotSupported() throws IOException {
+        ByteBufferRam byteBufferRam = new ByteBufferRam(
+                ByteBuffer.wrap("ABBA-DOMINO-78".getBytes(StandardCharsets.UTF_8)));
+        assertThat(byteBufferRam.supportsSource(StringBuffer.class), is(false));
+    }
+
+    @Test
+    public void getUByte() throws IOException {
+        ByteBuffer b = getByteBuffer();
+        ByteBufferRam byteBufferRam = new ByteBufferRam(b);
+        assertThat(byteBufferRam.getUByteAt(0), is((short) 0xff));
+        assertThat(byteBufferRam.getUByteAt(10), is((short) 0xff));
+    }
+
+    @Test
+    public void getInt16() throws IOException {
+        ByteBuffer b = getByteBuffer();
+        ByteBufferRam byteBufferRam = new ByteBufferRam(b);
+        assertThat(byteBufferRam.getInt16At(0), is((short) 0xffff));
+        assertThat(byteBufferRam.getInt16At(10), is((short) 0xffff));
+    }
+
+    @Test
+    public void getUInt16() throws IOException {
+        ByteBuffer b = getByteBuffer();
+        ByteBufferRam byteBufferRam = new ByteBufferRam(b);
+        assertThat(byteBufferRam.getUInt16At(0), is(0xffff));
+        assertThat(byteBufferRam.getUInt16At(10), is(0xffff));
+    }
+
+    @Test
+    public void getInt32() throws IOException {
+        ByteBuffer b = getByteBuffer();
+        ByteBufferRam byteBufferRam = new ByteBufferRam(b);
+        assertThat(byteBufferRam.getInt32At(0), is(0xffff_ffff));
+        assertThat(byteBufferRam.getInt32At(10), is(0xffff_ffff));
+    }
+
+    @Test
+    public void getUInt32() throws IOException {
+        ByteBuffer b = getByteBuffer();
+        ByteBufferRam byteBufferRam = new ByteBufferRam(b);
+        assertThat(byteBufferRam.getUInt32At(0), is(0xffff_ffffL));
+        assertThat(byteBufferRam.getUInt32At(10), is(0xffff_ffffL));
+    }
+
+    @Test
+    public void getInt64() throws IOException {
+        ByteBuffer b = getByteBuffer();
+        ByteBufferRam byteBufferRam = new ByteBufferRam(b);
+        assertThat(byteBufferRam.getInt64At(0), is(0xffff_ffffffff_ffffL));
+        assertThat(byteBufferRam.getInt64At(10), is(0xffff_ffffffff_ffffL));
+    }
+
+    @Test
+    public void getUInt64() throws IOException {
+        ByteBuffer b = getByteBuffer();
+        ByteBufferRam byteBufferRam = new ByteBufferRam(b);
+        assertThat(byteBufferRam.getUInt64At(0), is(new ULong(0xffff_ffffffff_ffffL)));
+        assertThat(byteBufferRam.getUInt64At(10), is(new ULong(0xffff_ffffffff_ffffL)));
+    }
+
+    @Test
+    public void getFloat() throws IOException {
+        ByteBuffer b = getByteBuffer();
+        b.putFloat(0, 1.0f);
+        b.putFloat(10, 1.0f);
+        ByteBufferRam byteBufferRam = new ByteBufferRam(b);
+        assertThat(byteBufferRam.getFloatAt(0), is(1.0f));
+        assertThat(byteBufferRam.getFloatAt(10), is(1.0f));
+    }
+
+    @Test
+    public void getDouble() throws IOException {
+        ByteBuffer b = getByteBuffer();
+        b.putDouble(0, 1.0);
+        b.putDouble(10, 1.0);
+        ByteBufferRam byteBufferRam = new ByteBufferRam(b);
+        assertThat(byteBufferRam.getDoubleAt(0), is(1.0));
+        assertThat(byteBufferRam.getDoubleAt(10), is(1.0));
+    }
+
+    @Test
+    public void getString() throws IOException {
+        ByteBuffer b = getByteBuffer();
+        ByteBufferRam byteBufferRam = new ByteBufferRam(b);
+        assertThat(byteBufferRam.getStringAt(80, 13), is("ABCDEFGHIJKLM"));
+        assertThat(byteBufferRam.getStringAt(82, 9), is("CDEFGHIJK"));
+    }
+
+    @Test
+    public void getData() throws IOException {
+        ByteBuffer b = getByteBuffer();
+        ByteBufferRam byteBufferRam = new ByteBufferRam(b);
+        assertThat(byteBufferRam.getDataAt(80, 13).getBytes(), is("ABCDEFGHIJKLM".getBytes(StandardCharsets.UTF_8)));
+        assertThat(byteBufferRam.getDataAt(82, 9).getBytes(), is("CDEFGHIJK".getBytes(StandardCharsets.UTF_8)));
+    }
+
+    private ByteBuffer getByteBuffer() {
+        ByteBuffer b = ByteBuffer.allocate(100);
+        for (int i = 0; i < 80; i++) {
+            b.put((byte) 0xff);
+        }
+        b.put("ABCDEFGHIJKLM".getBytes(StandardCharsets.UTF_8));
+        return b;
+    }
 }

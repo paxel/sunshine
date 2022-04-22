@@ -180,7 +180,6 @@ public class ByteBufferRoRamTest {
 	public void testStringBufferTarget() throws IOException {
 		ByteBufferRoRam byteBufferRam = new ByteBufferRoRam(
 				ByteBuffer.wrap("ABBA-DOMINO-78".getBytes(StandardCharsets.UTF_8)));
-		byte[] dest = new byte[6];
 		byteBufferRam.copyToDestination(0, 0, new StringBuffer());
 	}
 
