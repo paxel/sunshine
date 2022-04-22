@@ -80,6 +80,13 @@ public class ByteBufferRamTest {
     }
 
     @Test
+    public void getBytes() throws IOException {
+        ByteBufferRam byteBufferRam = new ByteBufferRam(ByteBuffer.wrap("ABBA-DOMINO-78".getBytes(StandardCharsets.UTF_8)));
+        assertThat(byteBufferRam.size(), is(14L));
+        assertThat(byteBufferRam.getBytes(), is("ABBA-DOMINO-78".getBytes(StandardCharsets.UTF_8)));
+    }
+
+    @Test
     public void getBytesAt() throws IOException {
         ByteBufferRam byteBufferRam = new ByteBufferRam(ByteBuffer.wrap("ABBA-DOMINO-78".getBytes(StandardCharsets.UTF_8)));
         byte[] bytesAt = byteBufferRam.getBytesAt(12, 2);
@@ -88,7 +95,7 @@ public class ByteBufferRamTest {
     }
 
     @Test
-    public void getBytes() throws IOException {
+    public void copyToDestination() throws IOException {
         ByteBufferRam byteBufferRam = new ByteBufferRam(ByteBuffer.wrap("ABBA-DOMINO-78".getBytes(StandardCharsets.UTF_8)));
         byte[] dest = new byte[4];
         byteBufferRam.copyToDestination(0, dest);
@@ -96,7 +103,7 @@ public class ByteBufferRamTest {
     }
 
     @Test
-    public void getBytes2() throws IOException {
+    public void copyToDestination2() throws IOException {
         ByteBufferRam byteBufferRam = new ByteBufferRam(ByteBuffer.wrap("ABBA-DOMINO-78".getBytes(StandardCharsets.UTF_8)));
         byte[] dest = new byte[4];
         byteBufferRam.copyToDestination(7, dest);
@@ -236,6 +243,24 @@ public class ByteBufferRamTest {
         assertThat(byteBufferRam.getBytesAt(0L, 5), is("TINA-".getBytes(StandardCharsets.UTF_8)));
     }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void invalidRead() throws IOException {
+        ByteBufferRam byteBufferRam = new ByteBufferRam(ByteBuffer.wrap("ABBA-DOMINO-78".getBytes(StandardCharsets.UTF_8)));
+        byteBufferRam.copyFromSource(-1, "OLDI".getBytes(StandardCharsets.UTF_8), 0, 4);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void invalidRead2() throws IOException {
+        ByteBufferRam byteBufferRam = new ByteBufferRam(ByteBuffer.wrap("ABBA-DOMINO-78".getBytes(StandardCharsets.UTF_8)));
+        byteBufferRam.copyFromSource(30, "OLDI".getBytes(StandardCharsets.UTF_8), 0, 4);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void invalidRead3() throws IOException {
+        ByteBufferRam byteBufferRam = new ByteBufferRam(ByteBuffer.wrap("ABBA-DOMINO-78".getBytes(StandardCharsets.UTF_8)));
+        byteBufferRam.copyFromSource(Integer.MAX_VALUE + 1L, "OLDI".getBytes(StandardCharsets.UTF_8), 0, 4);
+    }
+
     @Test
     public void testStringBufferTargetNotSupported() throws IOException {
         ByteBufferRam byteBufferRam = new ByteBufferRam(
@@ -251,59 +276,73 @@ public class ByteBufferRamTest {
     }
 
     @Test
-    public void getUByte() throws IOException {
+    public void getPutUByte() throws IOException {
         ByteBuffer b = getByteBuffer();
         ByteBufferRam byteBufferRam = new ByteBufferRam(b);
-        assertThat(byteBufferRam.getUByteAt(0), is((short) 0xff));
-        assertThat(byteBufferRam.getUByteAt(10), is((short) 0xff));
+        byteBufferRam.putUByteAt(0, (short) 254);
+        byteBufferRam.putUByteAt(10, (short) 0);
+        assertThat(byteBufferRam.getUByteAt(0), is((short) 254));
+        assertThat(byteBufferRam.getUByteAt(10), is((short) 0));
     }
 
     @Test
-    public void getInt16() throws IOException {
+    public void getPutInt16() throws IOException {
         ByteBuffer b = getByteBuffer();
         ByteBufferRam byteBufferRam = new ByteBufferRam(b);
-        assertThat(byteBufferRam.getInt16At(0), is((short) 0xffff));
-        assertThat(byteBufferRam.getInt16At(10), is((short) 0xffff));
+        byteBufferRam.putInt16At(0, Short.MIN_VALUE);
+        byteBufferRam.putInt16At(10, Short.MAX_VALUE);
+        assertThat(byteBufferRam.getInt16At(0), is(Short.MIN_VALUE));
+        assertThat(byteBufferRam.getInt16At(10), is(Short.MAX_VALUE));
     }
 
     @Test
-    public void getUInt16() throws IOException {
+    public void getPutUInt16() throws IOException {
         ByteBuffer b = getByteBuffer();
         ByteBufferRam byteBufferRam = new ByteBufferRam(b);
-        assertThat(byteBufferRam.getUInt16At(0), is(0xffff));
-        assertThat(byteBufferRam.getUInt16At(10), is(0xffff));
+        byteBufferRam.putUInt16At(0, Short.MAX_VALUE + 1);
+        byteBufferRam.putUInt16At(10, 0);
+        assertThat(byteBufferRam.getUInt16At(0), is(32768));
+        assertThat(byteBufferRam.getUInt16At(10), is(0));
     }
 
     @Test
-    public void getInt32() throws IOException {
+    public void getPutInt32() throws IOException {
         ByteBuffer b = getByteBuffer();
         ByteBufferRam byteBufferRam = new ByteBufferRam(b);
-        assertThat(byteBufferRam.getInt32At(0), is(0xffff_ffff));
-        assertThat(byteBufferRam.getInt32At(10), is(0xffff_ffff));
+        byteBufferRam.putInt32At(0, Integer.MAX_VALUE);
+        byteBufferRam.putInt32At(10, Integer.MIN_VALUE);
+        assertThat(byteBufferRam.getInt32At(0), is(Integer.MAX_VALUE));
+        assertThat(byteBufferRam.getInt32At(10), is(Integer.MIN_VALUE));
     }
 
     @Test
-    public void getUInt32() throws IOException {
+    public void getPutUInt32() throws IOException {
         ByteBuffer b = getByteBuffer();
         ByteBufferRam byteBufferRam = new ByteBufferRam(b);
-        assertThat(byteBufferRam.getUInt32At(0), is(0xffff_ffffL));
-        assertThat(byteBufferRam.getUInt32At(10), is(0xffff_ffffL));
+        byteBufferRam.putUInt32At(0, Integer.MAX_VALUE + 1L);
+        byteBufferRam.putUInt32At(10, 0);
+        assertThat(byteBufferRam.getUInt32At(0), is(2147483648L));
+        assertThat(byteBufferRam.getUInt32At(10), is(0L));
     }
 
     @Test
-    public void getInt64() throws IOException {
+    public void getPutInt64() throws IOException {
         ByteBuffer b = getByteBuffer();
         ByteBufferRam byteBufferRam = new ByteBufferRam(b);
-        assertThat(byteBufferRam.getInt64At(0), is(0xffff_ffffffff_ffffL));
-        assertThat(byteBufferRam.getInt64At(10), is(0xffff_ffffffff_ffffL));
+        byteBufferRam.putInt64At(0, Long.MAX_VALUE);
+        byteBufferRam.putInt64At(10, Long.MIN_VALUE);
+        assertThat(byteBufferRam.getInt64At(0), is(Long.MAX_VALUE));
+        assertThat(byteBufferRam.getInt64At(10), is(Long.MIN_VALUE));
     }
 
     @Test
     public void getUInt64() throws IOException {
         ByteBuffer b = getByteBuffer();
         ByteBufferRam byteBufferRam = new ByteBufferRam(b);
-        assertThat(byteBufferRam.getUInt64At(0), is(new ULong(0xffff_ffffffff_ffffL)));
-        assertThat(byteBufferRam.getUInt64At(10), is(new ULong(0xffff_ffffffff_ffffL)));
+        byteBufferRam.putUInt64At(0, new ULong(Long.MAX_VALUE));
+        byteBufferRam.putUInt64At(10, new ULong(0L));
+        assertThat(byteBufferRam.getUInt64At(0), is(new ULong(Long.MAX_VALUE)));
+        assertThat(byteBufferRam.getUInt64At(10), is(new ULong(0L)));
     }
 
     @Test

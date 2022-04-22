@@ -114,19 +114,22 @@ public class ByteBufferRam implements RichReadWriteRandomAccessMemory, RichReadO
 
     private void validate(long index) {
         if (index > Integer.MAX_VALUE) {
-            throw new IndexOutOfBoundsException("index was > Integer.MAX_VALUE (unsupported for ByteBuffer) :" + index);
+            throw new IllegalArgumentException("index was > Integer.MAX_VALUE (unsupported for ByteBuffer) :" + index);
         }
         if (index < 0) {
-            throw new IndexOutOfBoundsException("index was < 0 :" + index);
+            throw new IllegalArgumentException("index was < 0 :" + index);
         }
         if (index > byteBuffer.limit()) {
-            throw new IndexOutOfBoundsException("index was > limit " + byteBuffer.limit() + " :" + index);
+            throw new IllegalArgumentException("index was > limit " + byteBuffer.limit() + " :" + index);
         }
     }
 
     @Override
     public void putUByteAt(long index, short value) {
-        byteBuffer.putShort((int) index, value);
+        if (value > (short) 0xff || value < 0) {
+            throw new IllegalArgumentException("Invalid UByte value " + value);
+        }
+        byteBuffer.put((int) index, (byte) value);
     }
 
     @Override
@@ -136,9 +139,12 @@ public class ByteBufferRam implements RichReadWriteRandomAccessMemory, RichReadO
 
     @Override
     public void putUInt16At(long index, int value) {
-        byteBuffer.putInt((int) index, value);
+        if (value > 0xffff || value < 0) {
+            throw new IllegalArgumentException("Invalid UInt16 value " + value);
+        }
+        byteBuffer.putShort((int) index, (short) value);
     }
-
+    
     @Override
     public void putInt32At(long index, int value) {
         byteBuffer.putInt((int) index, value);
@@ -146,7 +152,10 @@ public class ByteBufferRam implements RichReadWriteRandomAccessMemory, RichReadO
 
     @Override
     public void putUInt32At(long index, long value) {
-        byteBuffer.putLong((int) index, value);
+        if (value > 0xffff_ffffL || value < 0) {
+            throw new IllegalArgumentException("Invalid UInt32 value " + value);
+        }
+        byteBuffer.putInt((int) index, (int) value);
     }
 
     @Override
@@ -191,65 +200,65 @@ public class ByteBufferRam implements RichReadWriteRandomAccessMemory, RichReadO
         // TODO
     }
 
-	@Override
-	public short getUByteAt(long index) {
-		return (short) (byteBuffer.get((int) index) & 0xff);
-	}
+    @Override
+    public short getUByteAt(long index) {
+        return (short) (byteBuffer.get((int) index) & 0xff);
+    }
 
-	@Override
-	public short getInt16At(long index) {
-		return byteBuffer.getShort((int) index);
-	}
+    @Override
+    public short getInt16At(long index) {
+        return byteBuffer.getShort((int) index);
+    }
 
-	@Override
-	public int getUInt16At(long index) {
-		return ((int) byteBuffer.getShort((int) index)) & 0xffff;
-	}
+    @Override
+    public int getUInt16At(long index) {
+        return ((int) byteBuffer.getShort((int) index)) & 0xffff;
+    }
 
-	@Override
-	public int getInt32At(long index) {
-		return byteBuffer.getInt((int) index);
-	}
+    @Override
+    public int getInt32At(long index) {
+        return byteBuffer.getInt((int) index);
+    }
 
-	@Override
-	public long getUInt32At(long index) {
-		return Integer.toUnsignedLong(byteBuffer.getInt((int) index));
-	}
+    @Override
+    public long getUInt32At(long index) {
+        return Integer.toUnsignedLong(byteBuffer.getInt((int) index));
+    }
 
-	@Override
-	public long getInt64At(long index) {
-		return byteBuffer.getLong((int) index);
-	}
+    @Override
+    public long getInt64At(long index) {
+        return byteBuffer.getLong((int) index);
+    }
 
-	@Override
-	public ULong getUInt64At(long index) {
-		return new ULong(byteBuffer.getLong((int) index));
-	}
+    @Override
+    public ULong getUInt64At(long index) {
+        return new ULong(byteBuffer.getLong((int) index));
+    }
 
-	@Override
-	public float getFloatAt(long index) {
-		return byteBuffer.getFloat((int) index);
-	}
+    @Override
+    public float getFloatAt(long index) {
+        return byteBuffer.getFloat((int) index);
+    }
 
-	@Override
-	public double getDoubleAt(long index) {
-		return byteBuffer.getDouble((int) index);
-	}
+    @Override
+    public double getDoubleAt(long index) {
+        return byteBuffer.getDouble((int) index);
+    }
 
-	@Override
-	public String getStringAt(long index, int length) {
-		byte[] bytes = new byte[length];
-		byteBuffer.position((int) index);
-		byteBuffer.get(bytes);
-		return new String(bytes, StandardCharsets.UTF_8);
-	}
+    @Override
+    public String getStringAt(long index, int length) {
+        byte[] bytes = new byte[length];
+        byteBuffer.position((int) index);
+        byteBuffer.get(bytes);
+        return new String(bytes, StandardCharsets.UTF_8);
+    }
 
-	@Override
-	public ReadOnlyRandomAccessMemory getDataAt(long index, int length) {
-		byteBuffer.position((int) index);
-		ByteBuffer slice = byteBuffer.slice();
-		slice.limit(length);
-		return new ByteBufferRoRam(slice);
-	}
+    @Override
+    public ReadOnlyRandomAccessMemory getDataAt(long index, int length) {
+        byteBuffer.position((int) index);
+        ByteBuffer slice = byteBuffer.slice();
+        slice.limit(length);
+        return new ByteBufferRoRam(slice);
+    }
 
 }
